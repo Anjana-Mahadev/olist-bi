@@ -1,0 +1,7 @@
+# Ignore logs and runtime files
+logs/
+*.log
+
+# Ignore virtual environment
+venv/
+__pycache__/
