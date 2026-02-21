@@ -65,10 +65,10 @@ logs/
 *.out
 
 # Data folders
-data/
-*.db
-*.sqlite
-*.sqlite3
+# data/
+# *.db
+# *.sqlite
+# *.sqlite3
 
 # Environment variables
 .env
