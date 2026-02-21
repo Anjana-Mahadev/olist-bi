@@ -142,7 +142,7 @@ The workflow engine built with **LangGraph**. It defines the state machine logic
 1. **Clone the repository**
 ```bash
 git clone <repo_url>
-cd olist-bi-orchestrator
+cd olist-bi
 
 ```
 

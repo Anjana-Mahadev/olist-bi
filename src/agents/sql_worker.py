@@ -36,7 +36,7 @@ class SQLWorker:
         Generate a valid SQLite query for the following user question:
         {question}
 
-        Only provide the SQL query as output.
+        Only provide the SQL query as the output.
         """
 
         response = self.llm.invoke([HumanMessage(content=prompt)])
