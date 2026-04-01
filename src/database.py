@@ -77,22 +77,19 @@ def execute_query(query: str):
         {"error": "..."}
     """
     try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute(query)
+            rows = cursor.fetchall()
 
-        cursor.execute(query)
-        rows = cursor.fetchall()
+            columns = []
+            if cursor.description:
+                columns = [desc[0] for desc in cursor.description]
 
-        columns = []
-        if cursor.description:
-            columns = [desc[0] for desc in cursor.description]
-
-        conn.close()
-
-        return {
-            "columns": columns,
-            "rows": rows
-        }
+            return {
+                "columns": columns,
+                "rows": rows
+            }
 
     except Exception as e:
         return {"error": str(e)}

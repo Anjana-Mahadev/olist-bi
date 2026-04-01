@@ -1,55 +1,90 @@
-# src/agents/sql_worker.py
-from src.database import execute_query
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage
 from src.config import get_settings
-
-settings = get_settings()
+from src.tools.sql_tools import format_schema_context
+from src.agents.llm_utils import safe_invoke
 
 class SQLWorker:
     def __init__(self):
-        # LLM to convert natural questions into SQL
-        self.llm = ChatGroq(
-            groq_api_key=settings.GROQ_API_KEY,
-            model_name="llama-3.3-70b-versatile",
-            temperature=0
-        )
+        self.llm = None
+
+    def _get_llm(self):
+        if self.llm is None:
+            settings = get_settings()
+            self.llm = ChatGroq(
+                groq_api_key=settings.GROQ_API_KEY,
+                model_name="llama-3.3-70b-versatile",
+                temperature=0,
+            )
+        return self.llm
+
+    def _build_prompt(self, state: dict) -> str:
+        schema_context = state.get("selected_schema") or format_schema_context(state.get("selected_tables", []))
+        plan = state.get("plan", [])
+        sub_questions = state.get("sub_questions", [])
+        validation_errors = state.get("validation_errors", [])
+        execution_error = state.get("execution_error", "")
+        previous_sql = state.get("sql_query", "")
+
+        plan_text = "\n".join(f"- {step}" for step in plan) if plan else "- Answer the question with one SQLite query"
+        sub_question_text = "\n".join(f"- {item}" for item in sub_questions) if sub_questions else "- None"
+
+        repair_block = ""
+        if validation_errors or execution_error or previous_sql:
+            repair_lines = []
+            if previous_sql:
+                repair_lines.append(f"Previous SQL:\n{previous_sql}")
+            if validation_errors:
+                repair_lines.append("Validation issues:\n" + "\n".join(f"- {item}" for item in validation_errors))
+            if execution_error:
+                repair_lines.append(f"Execution error:\n- {execution_error}")
+            repair_block = "\n\nFix the issues below when generating the next SQL query:\n" + "\n".join(repair_lines)
+
+        return f"""
+You are an expert SQLite analyst for the Olist e-commerce database.
+
+Rules:
+- Return exactly one read-only SQLite query.
+- Use only the tables and columns listed below.
+- Do not use markdown, explanations, or code fences.
+- Prefer explicit joins and explicit column names.
+- For row-level queries, include a LIMIT clause.
+
+Available schema:
+{schema_context}
+
+User question:
+{state.get('question', '')}
+
+Planning notes:
+{plan_text}
+
+Sub-questions:
+{sub_question_text}
+{repair_block}
+""".strip()
 
     def run(self, state: dict):
-        question = state.get("question", "")
-
-        # Generate SQL using LLM
-        prompt = f"""
-        You are an expert SQL generator for an SQLite database.
-
-        Database tables:
-        - sellers(seller_id, seller_zip_code_prefix, seller_city, seller_state)
-        - product_category_name_translation(product_category_name, product_category_name_english)
-        - orders(order_id, customer_id, order_status, order_purchase_timestamp, order_approved_at, order_delivered_carrier_date, order_delivered_customer_date, order_estimated_delivery_date)
-        - products(product_id, product_category_name, product_name_lenght, product_description_lenght, product_photos_qty, product_weight_g, product_length_cm, product_height_cm, product_width_cm)
-        - order_reviews(review_id, order_id, review_score, review_comment_title, review_comment_message, review_creation_date, review_answer_timestamp)
-        - geolocation(geolocation_zip_code_prefix, geolocation_lat, geolocation_lng, geolocation_city, geolocation_state)
-        - order_items(order_id, order_item_id, product_id, seller_id, shipping_limit_date, price, freight_value)
-        - customers(customer_id, customer_unique_id, customer_zip_code_prefix, customer_city, customer_state)
-        - order_payments(order_id, payment_sequential, payment_type, payment_installments, payment_value)
-
-        Generate a valid SQLite query for the following user question:
-        {question}
-
-        Only provide the SQL query as the output.
-        """
-
-        response = self.llm.invoke([HumanMessage(content=prompt)])
+        prompt = self._build_prompt(state)
+        response = safe_invoke(self._get_llm(), [HumanMessage(content=prompt)], timeout_seconds=35)
         sql_query = response.content.strip()
-
-        # Remove code block markers if present
         sql_query = sql_query.replace("```sql", "").replace("```", "").strip()
-
-        # Execute SQL
-        db_result = execute_query(sql_query)
 
         return {
             **state,
             "sql_query": sql_query,
-            "db_result": db_result
+            "validation_errors": [],
+            "execution_error": "",
         }
+
+
+_sql_worker = SQLWorker()
+
+
+def sql_worker_node(state: dict):
+    return _sql_worker.run(state)
+
+
+def repair_sql_node(state: dict):
+    next_state = {**state, "retry_count": state.get("retry_count", 0) + 1}
+    return _sql_worker.run(next_state)

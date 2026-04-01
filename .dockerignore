@@ -1,0 +1,11 @@
+__pycache__
+*.pyc
+.env
+venv/
+.git/
+.gitignore
+*.md
+logs/
+notebooks/
+tests/
+olist.db

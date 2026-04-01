@@ -1,80 +1,120 @@
 import os
 import time
+import uuid
 import logging
-import json
 from flask import Flask, render_template, request, jsonify
+from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
+from src.config import get_settings
 from src.graph import app as langgraph_app
 from src.logger import log_interaction
 
 load_dotenv()
-logging.basicConfig(level=logging.INFO)
+settings = get_settings()
+
+logging.basicConfig(
+    level=getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 logger = logging.getLogger(__name__)
 
 flask_app = Flask(__name__)
+flask_app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024  # 1 MB max request size
+
+# --- CORS ---
+CORS(flask_app, origins=settings.CORS_ORIGINS.split(","))
+
+# --- Rate Limiting ---
+limiter = Limiter(get_remote_address, app=flask_app, default_limits=[settings.RATE_LIMIT])
+
+
+def _require_api_key():
+    """Return an error response if API_KEY is configured and the request doesn't match."""
+    configured_key = settings.API_KEY
+    if not configured_key:
+        return None  # auth disabled
+    provided = request.headers.get("X-API-Key", "")
+    if provided != configured_key:
+        return jsonify({"status": "error", "error": "Unauthorized"}), 401
+    return None
+
+
+# --- Health Check ---
+@flask_app.route('/health')
+def health():
+    return jsonify({"status": "ok"}), 200
+
 
 @flask_app.route('/')
 def index():
     return render_template('index.html')
 
+
 @flask_app.route('/query', methods=['POST'])
+@limiter.limit(settings.RATE_LIMIT)
 def query():
-    data = request.json
+    auth_error = _require_api_key()
+    if auth_error:
+        return auth_error
+
+    data = request.get_json(silent=True) or {}
     user_question = data.get('question', '').strip()
+    request_id = str(uuid.uuid4())[:8]
+
+    if not user_question:
+        return jsonify({"status": "error", "error": "Question cannot be empty"}), 400
+
+    if len(user_question) > settings.MAX_QUESTION_LENGTH:
+        return jsonify({
+            "status": "error",
+            "error": f"Question exceeds maximum length of {settings.MAX_QUESTION_LENGTH} characters"
+        }), 400
 
     try:
         start_time = time.time()
         initial_state = {
-            "question": user_question, 
+            "request_id": request_id,
+            "question": user_question,
             "messages": [{"role": "user", "content": user_question}],
             "plan": [],
             "data_results": [],
-            "is_complete": False
+            "node_trace": [],
+            "validation_errors": [],
+            "retry_count": 0,
+            "max_retries": 2,
+            "is_complete": False,
         }
 
-        # Invoke the graph
         final_state = langgraph_app.invoke(initial_state)
         execution_time = round(time.time() - start_time, 2)
 
-        # 🔥 DEBUG PRINT: See exactly what the agents are returning in your terminal
-        print("\n" + "="*50)
-        print("DEBUG: FULL FINAL STATE RECEIVED FROM AGENTS")
-        print(json.dumps({k: str(v) for k, v in final_state.items()}, indent=2))
-        print("="*50 + "\n")
+        analysis_text = final_state.get("final_answer") or final_state.get("analysis", "")
+        if not isinstance(analysis_text, str):
+            analysis_text = str(analysis_text)
 
-        # --- GREEDY EXTRACTION ---
-        # 1. Try to find the insight in data_results list
-        sql_query = "N/A"
-        analysis_insight = ""
-        
-        results = final_state.get("data_results", [])
-        for item in results:
-            if isinstance(item, dict):
-                if item.get("agent") == "sql_worker":
-                    sql_query = item.get("raw_data", sql_query)
-                if item.get("agent") == "analyst_worker":
-                    analysis_insight = item.get("insight", "")
+        sql_query = final_state.get("sql_query", "") if final_state.get("intent") == "data" else ""
 
-        # 2. FALLBACK: Check top-level keys if the agent didn't use data_results
-        if not analysis_insight:
-            analysis_insight = final_state.get("analysis") or \
-                               final_state.get("final_answer") or \
-                               final_state.get("insight") or \
-                               "Agents finished, but no 'analysis' key was found in the state."
-
-        if sql_query == "N/A":
-            sql_query = final_state.get("sql_query") or "N/A"
+        log_interaction(
+            question=user_question,
+            sql_query=sql_query,
+            db_result=final_state.get("db_result", {}),
+            final_answer=analysis_text,
+        )
 
         return jsonify({
             "status": "success",
+            "request_id": final_state.get("request_id", request_id),
             "sql": str(sql_query),
-            "analysis": str(analysis_insight),
-            "execution_time": execution_time
+            "analysis": analysis_text,
+            "execution_time": execution_time,
+            "trace": final_state.get("node_trace", []),
         })
 
     except Exception as e:
-        logger.error(f"❌ Error: {str(e)}", exc_info=True)
-        return jsonify({"status": "error", "error": str(e)}), 500
+        logger.error(f"Error processing request {request_id}: {e}", exc_info=True)
+        return jsonify({"status": "error", "request_id": request_id, "error": "Internal server error"}), 500
 
 if __name__ == '__main__':
-    flask_app.run(host='0.0.0.0', port=5000, debug=True)
+    flask_app.run(host=settings.HOST, port=settings.PORT, debug=settings.DEBUG)

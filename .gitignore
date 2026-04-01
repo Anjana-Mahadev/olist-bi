@@ -66,9 +66,9 @@ logs/
 
 # Data folders
 # data/
-# *.db
-# *.sqlite
-# *.sqlite3
+*.db
+*.sqlite
+*.sqlite3
 
 # Environment variables
 .env

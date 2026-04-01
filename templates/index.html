@@ -4,87 +4,344 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Olist BI Assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
     <style>
-        /* Custom scrollbar for a cleaner look */
+        :root {
+            --bg-ink: #09111f;
+            --bg-panel: #101c2e;
+            --bg-panel-soft: rgba(23, 37, 61, 0.7);
+            --line: rgba(131, 160, 207, 0.25);
+            --text: #e7edf9;
+            --text-soft: #9eb0cc;
+            --accent: #29c5a6;
+            --accent-2: #4fc3f7;
+            --accent-warm: #ff9f68;
+            --danger: #ff7a7a;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Space Grotesk", sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(1100px 700px at 15% 10%, rgba(41, 197, 166, 0.14), transparent 60%),
+                radial-gradient(1000px 700px at 85% 85%, rgba(79, 195, 247, 0.16), transparent 64%),
+                radial-gradient(900px 500px at 80% 10%, rgba(255, 159, 104, 0.12), transparent 68%),
+                var(--bg-ink);
+            min-height: 100vh;
+        }
+
+        .grid-overlay {
+            pointer-events: none;
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 36px 36px;
+            mask-image: radial-gradient(circle at center, black, transparent 85%);
+            z-index: 0;
+        }
+
+        .glass {
+            background: linear-gradient(130deg, rgba(16, 28, 46, 0.9), rgba(14, 25, 42, 0.72));
+            border: 1px solid var(--line);
+            box-shadow:
+                0 10px 30px rgba(0, 0, 0, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(8px);
+        }
+
+        .pulse-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            background: var(--accent);
+            box-shadow: 0 0 0 rgba(41, 197, 166, 0.45);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(41, 197, 166, 0.45); }
+            70% { box-shadow: 0 0 0 10px rgba(41, 197, 166, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(41, 197, 166, 0); }
+        }
+
+        @keyframes slideUpFade {
+            from {
+                opacity: 0;
+                transform: translateY(14px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-enter {
+            animation: slideUpFade 420ms ease-out;
+        }
+
+        .mono {
+            font-family: "IBM Plex Mono", monospace;
+        }
+
         ::-webkit-scrollbar {
             width: 8px;
         }
+
         ::-webkit-scrollbar-track {
-            background: #1f2937;
+            background: rgba(11, 18, 33, 0.85);
         }
+
         ::-webkit-scrollbar-thumb {
-            background: #4b5563;
+            background: rgba(110, 136, 175, 0.6);
             border-radius: 4px;
         }
+
         ::-webkit-scrollbar-thumb:hover {
-            background: #6b7280;
+            background: rgba(130, 161, 207, 0.85);
+        }
+
+        @media (max-width: 640px) {
+            .hero-title {
+                font-size: 2.1rem;
+                line-height: 1.1;
+            }
         }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col items-center p-4 md:p-10">
+<body class="min-h-screen p-4 md:p-10">
+    <div class="grid-overlay"></div>
 
-    <div class="max-w-4xl w-full">
-        <header class="text-center mb-10">
-            <h1 class="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
-                Olist BI Orchestrator
-            </h1>
-            <p class="text-gray-400 mt-3 text-lg">Multi-Agent E-commerce Intelligence System</p>
+    <main class="relative z-10 max-w-5xl mx-auto w-full">
+        <header class="mb-8 md:mb-10">
+            <div class="glass rounded-2xl p-6 md:p-8">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                        <p class="mono text-xs tracking-[0.25em] uppercase" style="color: var(--text-soft);">Agentic Analytics Platform</p>
+                        <h1 class="hero-title mt-2 text-4xl md:text-6xl font-bold tracking-tight">
+                            Olist BI Command Center
+                        </h1>
+                        <p class="mt-3 text-base md:text-lg" style="color: var(--text-soft);">
+                            Ask natural language questions and get validated SQL plus grounded business insights.
+                        </p>
+                    </div>
+                </div>
+            </div>
         </header>
 
-        <div class="bg-gray-800 p-2 rounded-2xl shadow-2xl mb-10 border border-gray-700">
-            <div class="flex flex-col md:flex-row gap-2">
-                <input type="text" id="question" 
-                    placeholder="e.g. What is the total revenue by state?" 
-                    class="flex-1 bg-transparent border-none rounded-xl px-6 py-4 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
-                    onkeypress="if(event.key === 'Enter') askQuestion()">
-                <button onclick="askQuestion()" id="sendBtn" 
-                    class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-xl font-bold transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-lg">
-                    Analyze
+        <!-- Agent Graph Diagram dropdown -->
+        <div class="glass rounded-2xl overflow-hidden mb-6">
+            <button onclick="toggleGraph()" class="w-full px-6 py-4 flex justify-between items-center transition" style="background: rgba(255, 255, 255, 0.03);">
+                <div class="flex items-center gap-3">
+                    <div class="flex items-end gap-1" style="opacity: 0.8;">
+                        <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent);"></div>
+                        <div style="width: 6px; height: 6px; border-radius: 50%; background: var(--accent-2); margin-bottom: 1px;"></div>
+                        <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent-warm);"></div>
+                    </div>
+                    <span class="mono text-xs uppercase tracking-[0.18em]" style="color: var(--text-soft);">Agent Graph Diagram</span>
+                    <span class="mono text-[10px] px-2 py-0.5 rounded-full" style="background: rgba(41,197,166,0.12); border: 1px solid rgba(41,197,166,0.3); color: var(--accent);">11 nodes</span>
+                </div>
+                <span id="graphChevron" class="mono text-base" style="color: var(--text-soft); transition: transform 0.3s ease;">&#8964;</span>
+            </button>
+            <div id="graphContainer" class="hidden px-6 pb-6 pt-2">
+                <p class="mono text-[11px] mb-4" style="color: var(--text-soft);">Each user query is routed through this graph. Nodes execute in sequence; conditional edges handle retries and failures.</p>
+                <div id="mermaidGraph" class="mermaid overflow-x-auto" style="background: transparent; min-height: 120px;">
+flowchart TD
+    Router([Router]):::entry
+    Responder([Responder]):::conv
+    SchemaSelector([Schema Selector]):::util
+    Planner([Planner]):::util
+    Decomposer([Decomposer]):::util
+    SQLWorker([SQL Worker]):::sql
+    SQLValidator([SQL Validator]):::sql
+    RepairSQL([Repair SQL]):::repair
+    DBExecutor([DB Executor]):::exec
+    Analyst([Analyst]):::analyst
+    AnswerComposer([Answer Composer]):::output
+
+    Router -- "greeting / general" --> Responder
+    Router -- "data query" --> SchemaSelector
+    Responder --> AnswerComposer
+    SchemaSelector --> Planner
+    Planner -- "simple" --> SQLWorker
+    Planner -- "complex" --> Decomposer
+    Decomposer --> SQLWorker
+    SQLWorker --> SQLValidator
+    SQLValidator -- "valid" --> DBExecutor
+    SQLValidator -- "invalid + retry" --> RepairSQL
+    SQLValidator -- "exhausted" --> AnswerComposer
+    RepairSQL --> SQLWorker
+    DBExecutor -- "success" --> Analyst
+    DBExecutor -- "error + retry" --> RepairSQL
+    DBExecutor -- "exhausted" --> AnswerComposer
+    Analyst --> AnswerComposer
+
+    classDef entry fill:#0c2318,stroke:#29c5a6,color:#c2fff4
+    classDef conv fill:#0a1c2e,stroke:#4fc3f7,color:#c2e4ff
+    classDef util fill:#10143a,stroke:#7c82c9,color:#c5c8ff
+    classDef sql fill:#170d30,stroke:#b47cf7,color:#e0c8ff
+    classDef exec fill:#1c1008,stroke:#ff9f68,color:#ffd4b5
+    classDef analyst fill:#081c28,stroke:#4fc3f7,color:#a8e6f8
+    classDef repair fill:#241010,stroke:#ff7a7a,color:#ffc8c8
+    classDef output fill:#071a12,stroke:#29c5a6,color:#b5f5db
+                </div>
+            </div>
+        </div>
+
+        <section class="glass rounded-2xl p-3 md:p-4 mb-8">
+            <div class="flex flex-col md:flex-row gap-3">
+                <input
+                    type="text"
+                    id="question"
+                    placeholder="e.g. Compare monthly revenue and delivery performance by state"
+                    class="w-full rounded-xl px-5 py-4 text-base md:text-lg focus:outline-none"
+                    style="background: rgba(7, 14, 27, 0.62); border: 1px solid var(--line);"
+                    onkeypress="if(event.key === 'Enter') askQuestion()"
+                >
+                <button
+                    onclick="askQuestion()"
+                    id="sendBtn"
+                    class="rounded-xl px-8 py-4 text-sm md:text-base font-semibold transition-all duration-200"
+                    style="background: linear-gradient(130deg, var(--accent), var(--accent-2)); color: #041019; box-shadow: 0 10px 24px rgba(41, 197, 166, 0.25);"
+                >
+                    Run Analysis
                 </button>
             </div>
+
+            <div class="mt-4 flex flex-wrap gap-2">
+                <button class="chip mono text-xs px-3 py-2 rounded-full" onclick="usePrompt(this)">Top categories by revenue</button>
+                <button class="chip mono text-xs px-3 py-2 rounded-full" onclick="usePrompt(this)">Monthly order trend in 2018</button>
+                <button class="chip mono text-xs px-3 py-2 rounded-full" onclick="usePrompt(this)">States with highest freight cost</button>
+                <button class="chip mono text-xs px-3 py-2 rounded-full" onclick="usePrompt(this)">Average review score by category</button>
+            </div>
+        </section>
+
+        <div id="errorBox" class="hidden rounded-xl px-4 py-3 mb-6 mono text-sm" style="background: rgba(255, 122, 122, 0.12); border: 1px solid rgba(255, 122, 122, 0.4); color: #ffd9d9;"></div>
+
+        <div id="loader" class="hidden glass rounded-2xl p-8 mb-8">
+            <div class="flex items-center gap-4">
+                <div class="flex gap-1.5">
+                    <span class="loader-bar"></span>
+                    <span class="loader-bar"></span>
+                    <span class="loader-bar"></span>
+                </div>
+                <div>
+                    <p class="font-semibold">Agents are coordinating</p>
+                    <p class="mono text-xs mt-1" style="color: var(--text-soft);">Routing request, validating SQL, synthesizing insight</p>
+                </div>
+            </div>
         </div>
 
-        <div id="loader" class="hidden flex flex-col items-center py-12">
-            <div class="relative">
-                <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
-                <div class="absolute top-0 left-0 animate-ping rounded-full h-16 w-16 border-4 border-blue-400 opacity-20"></div>
-            </div>
-            <p class="mt-6 text-blue-400 font-medium animate-pulse text-lg">Agents are collaborating on your answer...</p>
-        </div>
+        <div id="resultArea" class="hidden space-y-6">
+            <section class="glass rounded-2xl overflow-hidden result-enter">
+                <div class="px-6 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2" style="background: linear-gradient(120deg, rgba(41, 197, 166, 0.17), rgba(79, 195, 247, 0.19)); border-bottom: 1px solid var(--line);">
+                    <h3 class="mono text-xs uppercase tracking-[0.2em]" style="color: #c2fff4;">Strategic Analysis</h3>
 
-        <div id="resultArea" class="hidden space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            
-            <div class="bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-700">
-                <div class="bg-gradient-to-r from-blue-600 to-emerald-600 px-6 py-3">
-                    <h3 class="text-xs font-black uppercase tracking-widest text-white">🧠 Strategic Analysis</h3>
                 </div>
-                <div class="p-8">
-                    <div id="analysisText" class="text-gray-200 text-lg leading-relaxed whitespace-pre-wrap"></div>
+                <div class="p-6 md:p-8">
+                    <div id="analysisText" class="text-base md:text-lg leading-relaxed whitespace-pre-wrap" style="color: #dce8fb;"></div>
                 </div>
-            </div>
+            </section>
 
-            <div class="bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden">
-                <button onclick="toggleSql()" class="w-full px-6 py-4 flex justify-between items-center hover:bg-gray-700 transition">
-                    <span class="text-xs font-bold uppercase text-gray-500 tracking-wider">🛠️ Technical SQL Query</span>
-                    <span id="sqlChevron" class="text-gray-500 transform transition-transform">▼</span>
+            <section id="sqlPanel" class="glass rounded-2xl overflow-hidden result-enter">
+                <button onclick="toggleSql()" class="w-full px-6 py-4 flex justify-between items-center transition" style="background: rgba(255, 255, 255, 0.03);">
+                    <span class="mono text-xs uppercase tracking-[0.18em]" style="color: var(--text-soft);">SQL Trace</span>
+                    <span id="sqlChevron" class="mono text-sm transition-transform" style="color: var(--text-soft);">v</span>
                 </button>
                 <div id="sqlContainer" class="hidden px-6 pb-6">
-                    <pre id="sqlText" class="bg-black p-5 rounded-xl text-emerald-400 text-sm font-mono overflow-x-auto border border-emerald-900/30 shadow-inner"></pre>
+                    <pre id="sqlText" class="mono p-5 rounded-xl text-sm overflow-x-auto" style="background: #040a16; color: #8effd9; border: 1px solid rgba(142, 255, 217, 0.15);"></pre>
                 </div>
-            </div>
+            </section>
 
-            <div class="flex flex-col md:flex-row justify-between items-center gap-4 px-4 py-2 border-t border-gray-800">
-                <div class="flex items-center gap-2">
-                    <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
-                    <span class="text-xs text-gray-500 font-mono" id="timeText"></span>
+            <section id="tracePanel" class="glass rounded-2xl overflow-hidden result-enter">
+                <button onclick="toggleTrace()" class="w-full px-6 py-4 flex justify-between items-center transition" style="background: rgba(255, 255, 255, 0.03);">
+                    <span class="mono text-xs uppercase tracking-[0.18em]" style="color: var(--text-soft);">Execution Trace</span>
+                    <span id="traceChevron" class="mono text-sm transition-transform" style="color: var(--text-soft);">v</span>
+                </button>
+                <div id="traceContainer" class="hidden px-6 pb-6">
+                    <div id="traceMeta" class="mono text-[11px] mb-3" style="color: var(--text-soft);"></div>
+                    <div id="traceList" class="mono text-xs space-y-2"></div>
                 </div>
-                <span class="text-[10px] uppercase tracking-tighter text-gray-600">Olist Multi-Agent Engine • 2026 Production Environment</span>
-            </div>
+            </section>
+
+            <section class="glass rounded-2xl px-5 py-4 result-enter">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <span class="pulse-dot"></span>
+                        <span id="timeText" class="mono text-xs" style="color: var(--text-soft);"></span>
+                    </div>
+                    <span class="mono text-[11px] uppercase tracking-[0.18em]" style="color: var(--text-soft);">Olist BI Engine 2026</span>
+                </div>
+            </section>
         </div>
-    </div>
+    </main>
 
     <script>
+        mermaid.initialize({
+            startOnLoad: false,
+            theme: 'base',
+            flowchart: { curve: 'basis', padding: 24 },
+            themeVariables: {
+                background: '#09111f',
+                primaryColor: '#0c2318',
+                primaryTextColor: '#e7edf9',
+                primaryBorderColor: 'rgba(131,160,207,0.35)',
+                lineColor: 'rgba(131,160,207,0.55)',
+                secondaryColor: '#10143a',
+                tertiaryColor: '#170d30',
+                edgeLabelBackground: 'rgba(9,17,31,0.85)',
+                clusterBkg: 'rgba(255,255,255,0.03)',
+                titleColor: '#e7edf9',
+                fontFamily: 'IBM Plex Mono, monospace',
+                fontSize: '13px',
+            }
+        });
+
+        let graphRendered = false;
+
+        function toggleGraph() {
+            const container = document.getElementById('graphContainer');
+            const chevron = document.getElementById('graphChevron');
+            const isHidden = container.classList.contains('hidden');
+
+            if (isHidden) {
+                container.classList.remove('hidden');
+                chevron.style.transform = 'rotate(180deg)';
+                if (!graphRendered) {
+                    mermaid.run({ nodes: [document.getElementById('mermaidGraph')] });
+                    graphRendered = true;
+                }
+            } else {
+                container.classList.add('hidden');
+                chevron.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        const chipStyles = {
+            base: "background: rgba(255,255,255,0.05); border: 1px solid var(--line); color: var(--text-soft);",
+            hover: "background: rgba(255,255,255,0.1); color: var(--text);"
+        };
+
+        document.querySelectorAll('.chip').forEach((chip) => {
+            chip.setAttribute('style', chipStyles.base);
+            chip.addEventListener('mouseenter', () => chip.setAttribute('style', chipStyles.base + chipStyles.hover));
+            chip.addEventListener('mouseleave', () => chip.setAttribute('style', chipStyles.base));
+        });
+
+        function usePrompt(button) {
+            document.getElementById('question').value = button.innerText.trim();
+            document.getElementById('question').focus();
+        }
+
         function toggleSql() {
             const container = document.getElementById('sqlContainer');
             const chevron = document.getElementById('sqlChevron');
@@ -99,50 +356,148 @@
             }
         }
 
+        function toggleTrace() {
+            const container = document.getElementById('traceContainer');
+            const chevron = document.getElementById('traceChevron');
+            const isHidden = container.classList.contains('hidden');
+
+            if (isHidden) {
+                container.classList.remove('hidden');
+                chevron.style.transform = 'rotate(180deg)';
+            } else {
+                container.classList.add('hidden');
+                chevron.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        function renderTrace(trace, requestId) {
+            const tracePanel = document.getElementById('tracePanel');
+            const traceMeta = document.getElementById('traceMeta');
+            const traceList = document.getElementById('traceList');
+
+            if (!Array.isArray(trace) || trace.length === 0) {
+                tracePanel.classList.add('hidden');
+                traceMeta.innerText = '';
+                traceList.innerHTML = '';
+                return;
+            }
+
+            tracePanel.classList.remove('hidden');
+            const totalMs = trace.reduce((sum, step) => sum + (Number(step.ms) || 0), 0);
+            traceMeta.innerText = `Request ${requestId || 'N/A'} • ${trace.length} nodes • ${totalMs.toFixed(1)} ms`;
+
+            traceList.innerHTML = trace.map((step, index) => {
+                const node = (step.node || 'unknown').toString().replaceAll('_', ' ');
+                const ms = Number(step.ms || 0).toFixed(2);
+                const label = node.replace(/\b\w/g, (c) => c.toUpperCase());
+                return `
+                    <div class="rounded-lg px-3 py-2" style="background: rgba(255,255,255,0.04); border: 1px solid var(--line); color: var(--text-soft);">
+                        <span style="color: var(--text);">${index + 1}. ${label}</span>
+                        <span class="float-right" style="color: var(--accent-2);">${ms} ms</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
         async function askQuestion() {
             const questionInput = document.getElementById('question');
             const question = questionInput.value.trim();
             const btn = document.getElementById('sendBtn');
             const loader = document.getElementById('loader');
             const resultArea = document.getElementById('resultArea');
+            const errorBox = document.getElementById('errorBox');
 
             if (!question) return;
 
-            // Update UI to Loading State
+            errorBox.classList.add('hidden');
+            errorBox.innerText = '';
             btn.disabled = true;
-            btn.innerText = "Processing...";
+            btn.innerText = "Running...";
             loader.classList.remove('hidden');
             resultArea.classList.add('hidden');
 
             try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 45000);
                 const response = await fetch('/query', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question })
+                    body: JSON.stringify({ question }),
+                    signal: controller.signal,
                 });
+                clearTimeout(timeoutId);
                 
                 const data = await response.json();
 
                 if (data.status === 'error') throw new Error(data.error);
 
-                // Populate Data
-                document.getElementById('analysisText').innerText = data.analysis;
-                document.getElementById('sqlText').innerText = data.sql;
-                document.getElementById('timeText').innerText = `Computation took ${data.execution_time} seconds`;
+                let analysisHtml = '';
+                const analysis = data.analysis;
+                if (typeof analysis === 'string') {
+                    analysisHtml = `<p class="leading-relaxed whitespace-pre-wrap">${analysis}</p>`;
+                } else {
+                    analysisHtml = `<pre class="mono text-sm">${JSON.stringify(analysis, null, 2)}</pre>`;
+                }
+
+                document.getElementById('analysisText').innerHTML = analysisHtml;
+
+                const sqlPanel = document.getElementById('sqlPanel');
+                if (data.sql && data.sql.trim()) {
+                    document.getElementById('sqlText').innerText = data.sql;
+                    sqlPanel.classList.remove('hidden');
+                } else {
+                    sqlPanel.classList.add('hidden');
+                }
+
+                renderTrace(data.trace, data.request_id);
                 
-                // Show Results
+                document.getElementById('timeText').innerText = `Response time ${data.execution_time}s`;
                 resultArea.classList.remove('hidden');
-                window.scrollTo({ top: resultArea.offsetTop - 50, behavior: 'smooth' });
+                window.scrollTo({ top: resultArea.offsetTop - 40, behavior: 'smooth' });
+                questionInput.value = '';
 
             } catch (err) {
                 console.error(err);
-                alert("The system encountered an error: " + err.message);
+                errorBox.classList.remove('hidden');
+                if (err.name === 'AbortError') {
+                    errorBox.innerText = "The request timed out. Please retry with a more specific question.";
+                } else {
+                    errorBox.innerText = "The system encountered an error: " + err.message;
+                }
             } finally {
                 btn.disabled = false;
-                btn.innerText = "Analyze";
+                btn.innerText = "Run Analysis";
                 loader.classList.add('hidden');
             }
         }
     </script>
+    <style>
+        .loader-bar {
+            width: 6px;
+            height: 18px;
+            border-radius: 999px;
+            background: linear-gradient(180deg, var(--accent), var(--accent-2));
+            animation: barPulse 0.9s ease-in-out infinite;
+        }
+
+        .loader-bar:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+
+        .loader-bar:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        @keyframes barPulse {
+            0%, 100% {
+                transform: scaleY(0.5);
+                opacity: 0.5;
+            }
+            50% {
+                transform: scaleY(1);
+                opacity: 1;
+            }
+        }
+    </style>
 </body>
 </html>

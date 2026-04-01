@@ -19,24 +19,20 @@ def main():
         try:
             start_time = time.time()
 
-            # Invoke LangGraph app
             state = app.invoke({"question": question})
 
             execution_time = round(time.time() - start_time, 2)
 
-            # Extract safely
             sql_query = state.get("sql_query", "N/A")
             db_result = state.get("db_result", {})
-            analysis = state.get("analysis", "No response generated.")
+            analysis = state.get("final_answer") or state.get("analysis", "No response generated.")
 
-            # Extract numeric result if possible
             numeric_output = ""
             if db_result.get("rows") and db_result.get("columns"):
                 if len(db_result["rows"][0]) == 1:
                     numeric_value = db_result["rows"][0][0]
                     numeric_output = f"**Numeric Result:** {numeric_value}\n"
 
-            # Display outputs
             print("\n🧠 Generated SQL:\n")
             print(sql_query)
 
