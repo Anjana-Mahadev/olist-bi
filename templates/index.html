@@ -252,24 +252,30 @@ flowchart TD
                 </div>
             </section>
 
+
             <section id="sqlPanel" class="glass rounded-2xl overflow-hidden result-enter">
-                <button onclick="toggleSql()" class="w-full px-6 py-4 flex justify-between items-center transition" style="background: rgba(255, 255, 255, 0.03);">
+                <div class="w-full px-6 py-4 flex justify-between items-center" style="background: rgba(255, 255, 255, 0.03);">
                     <span class="mono text-xs uppercase tracking-[0.18em]" style="color: var(--text-soft);">SQL Trace</span>
-                    <span id="sqlChevron" class="mono text-sm transition-transform" style="color: var(--text-soft);">v</span>
-                </button>
-                <div id="sqlContainer" class="hidden px-6 pb-6">
+                </div>
+                <div id="sqlContainer" class="px-6 pb-6">
                     <pre id="sqlText" class="mono p-5 rounded-xl text-sm overflow-x-auto" style="background: #040a16; color: #8effd9; border: 1px solid rgba(142, 255, 217, 0.15);"></pre>
                 </div>
             </section>
 
             <section id="tracePanel" class="glass rounded-2xl overflow-hidden result-enter">
-                <button onclick="toggleTrace()" class="w-full px-6 py-4 flex justify-between items-center transition" style="background: rgba(255, 255, 255, 0.03);">
+                <div class="w-full px-6 py-4 flex justify-between items-center" style="background: rgba(255, 255, 255, 0.03);">
                     <span class="mono text-xs uppercase tracking-[0.18em]" style="color: var(--text-soft);">Execution Trace</span>
-                    <span id="traceChevron" class="mono text-sm transition-transform" style="color: var(--text-soft);">v</span>
-                </button>
-                <div id="traceContainer" class="hidden px-6 pb-6">
+                </div>
+                <div id="traceContainer" class="px-6 pb-6">
                     <div id="traceMeta" class="mono text-[11px] mb-3" style="color: var(--text-soft);"></div>
                     <div id="traceList" class="mono text-xs space-y-2"></div>
+                </div>
+            </section>
+
+            <section id="metricsPanel" class="glass rounded-2xl px-5 py-4 result-enter">
+                <div>
+                    <h4 class="mono text-xs uppercase tracking-[0.18em] mb-2" style="color: var(--accent);">Query Metrics</h4>
+                    <div id="metricsBox" class="mono text-xs grid grid-cols-1 md:grid-cols-2 gap-2"></div>
                 </div>
             </section>
 
@@ -441,16 +447,34 @@ flowchart TD
 
                 document.getElementById('analysisText').innerHTML = analysisHtml;
 
-                const sqlPanel = document.getElementById('sqlPanel');
+
+
+                // Show SQL panel only if SQL is present (i.e., not a greeting/general query)
                 if (data.sql && data.sql.trim()) {
                     document.getElementById('sqlText').innerText = data.sql;
-                    sqlPanel.classList.remove('hidden');
+                    document.getElementById('sqlPanel').classList.remove('hidden');
                 } else {
-                    sqlPanel.classList.add('hidden');
+                    document.getElementById('sqlText').innerText = '';
+                    document.getElementById('sqlPanel').classList.add('hidden');
                 }
 
+                // Always show trace panel
                 renderTrace(data.trace, data.request_id);
-                
+                document.getElementById('tracePanel').classList.remove('hidden');
+
+                // Show metrics
+                const metrics = data.metrics || {};
+                const metricsBox = document.getElementById('metricsBox');
+                let metricsHtml = '';
+                metricsHtml += `<div><b>Validation Errors:</b> ${metrics.validation_errors && metrics.validation_errors.length ? metrics.validation_errors.join('<br>') : 'None'}</div>`;
+                metricsHtml += `<div><b>Repair Attempts:</b> ${metrics.repair_attempts || 0} / ${metrics.max_retries || 2}</div>`;
+                metricsHtml += `<div><b>Confidence:</b> ${metrics.confidence !== undefined && metrics.confidence !== null ? metrics.confidence.toFixed(2) : 'N/A'}</div>`;
+                metricsHtml += `<div><b>Execution Error:</b> ${metrics.execution_error ? metrics.execution_error : 'None'}</div>`;
+                metricsHtml += `<div><b>LLM Model:</b> ${metrics.llm_model || 'N/A'}</div>`;
+                metricsHtml += `<div><b>LLM Tokens:</b> ${metrics.llm_tokens !== undefined && metrics.llm_tokens !== null ? metrics.llm_tokens : 'N/A'}</div>`;
+                metricsBox.innerHTML = metricsHtml;
+                document.getElementById('metricsPanel').classList.remove('hidden');
+
                 document.getElementById('timeText').innerText = `Response time ${data.execution_time}s`;
                 resultArea.classList.remove('hidden');
                 window.scrollTo({ top: resultArea.offsetTop - 40, behavior: 'smooth' });

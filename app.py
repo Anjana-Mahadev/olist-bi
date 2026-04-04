@@ -87,6 +87,7 @@ def query():
             "is_complete": False,
         }
 
+
         final_state = langgraph_app.invoke(initial_state)
         execution_time = round(time.time() - start_time, 2)
 
@@ -95,6 +96,17 @@ def query():
             analysis_text = str(analysis_text)
 
         sql_query = final_state.get("sql_query", "") if final_state.get("intent") == "data" else ""
+
+        # --- Metrics ---
+        metrics = {
+            "validation_errors": final_state.get("validation_errors", []),
+            "repair_attempts": final_state.get("retry_count", 0),
+            "max_retries": final_state.get("max_retries", 2),
+            "confidence": final_state.get("confidence", None),
+            "execution_error": final_state.get("execution_error", ""),
+            "llm_tokens": final_state.get("llm_tokens", None),
+            "llm_model": final_state.get("llm_model", None),
+        }
 
         log_interaction(
             question=user_question,
@@ -110,6 +122,7 @@ def query():
             "analysis": analysis_text,
             "execution_time": execution_time,
             "trace": final_state.get("node_trace", []),
+            "metrics": metrics,
         })
 
     except Exception as e:

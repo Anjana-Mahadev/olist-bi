@@ -66,15 +66,28 @@ Sub-questions:
 
     def run(self, state: dict):
         prompt = self._build_prompt(state)
-        response = safe_invoke(self._get_llm(), [HumanMessage(content=prompt)], timeout_seconds=35)
+        llm = self._get_llm()
+        response = safe_invoke(llm, [HumanMessage(content=prompt)], timeout_seconds=35)
         sql_query = response.content.strip()
         sql_query = sql_query.replace("```sql", "").replace("```", "").strip()
+
+        # Track LLM model and token usage if available
+        llm_model = getattr(llm, "model_name", None)
+        llm_tokens = None
+        # Try to extract token usage from response (LangChain convention)
+        if hasattr(response, "usage") and response.usage:
+            # OpenAI-like usage dict
+            llm_tokens = response.usage.get("total_tokens")
+        elif hasattr(response, "token_usage"):
+            llm_tokens = response.token_usage
 
         return {
             **state,
             "sql_query": sql_query,
             "validation_errors": [],
             "execution_error": "",
+            "llm_model": llm_model,
+            "llm_tokens": llm_tokens,
         }
 
 
