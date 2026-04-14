@@ -1,5 +1,6 @@
 import pandas as pd
 import sqlite3
+from sqlite3 import OperationalError
 import os
 from pathlib import Path
 
@@ -76,11 +77,20 @@ def execute_query(query: str):
     OR
         {"error": "..."}
     """
+    import time
+    deadline = time.monotonic() + 30  # 30-second query timeout
+
+    def _check_timeout():
+        return time.monotonic() > deadline
+
     try:
-        with sqlite3.connect(DB_PATH) as conn:
+        with sqlite3.connect(DB_PATH, timeout=30) as conn:
+            conn.execute("PRAGMA busy_timeout = 5000")
+            conn.execute("PRAGMA temp_store = MEMORY")
+            conn.set_progress_handler(_check_timeout, 2000000)  # check every ~2M ops
             cursor = conn.cursor()
             cursor.execute(query)
-            rows = cursor.fetchall()
+            rows = cursor.fetchmany(500)
 
             columns = []
             if cursor.description:
@@ -90,6 +100,11 @@ def execute_query(query: str):
                 "columns": columns,
                 "rows": rows
             }
+
+    except OperationalError as e:
+        if "interrupted" in str(e).lower():
+            return {"error": "Query took too long and was cancelled. Try a simpler question."}
+        return {"error": str(e)}
 
     except Exception as e:
         return {"error": str(e)}

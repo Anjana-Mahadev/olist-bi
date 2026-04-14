@@ -55,7 +55,7 @@ git lfs pull
 # --- 4. Copy application code ---
 echo "[4/7] Deploying application to $APP_DIR..."
 mkdir -p "$APP_DIR"
-rsync -a --exclude='venv' --exclude='__pycache__' --exclude='.git' \
+rsync -a --exclude='venv' --exclude='__pycache__' --exclude='.git' --exclude='data' \
   "$REPO_SRC/" "$APP_DIR/"
 
 # --- 5. Python virtual environment & dependencies ---

@@ -64,7 +64,7 @@ TABLE_KEYWORDS = {
 	"sellers": ["seller", "sellers", "merchant", "merchants"],
 	"order_payments": ["payment", "payments", "installment", "revenue", "paid"],
 	"order_reviews": ["review", "reviews", "rating", "score", "satisfaction"],
-	"geolocation": ["geolocation", "latitude", "longitude", "zip", "state", "city", "location"],
+	"geolocation": ["geolocation", "latitude", "longitude", "coordinates"],
 }
 
 DEFAULT_TABLES = ["orders", "order_items", "products", "customers", "order_payments", "order_reviews"]
@@ -100,7 +100,7 @@ def select_tables_for_question(question: str) -> List[str]:
 	if "products" in selected and "product_category_name_translation" not in selected and "category" in text:
 		selected.add("product_category_name_translation")
 
-	if "customers" in selected and any(token in text for token in ["city", "state", "zip", "location"]):
+	if "customers" in selected and any(token in text for token in ["geolocation", "latitude", "longitude", "coordinates"]):
 		selected.add("geolocation")
 
 	return [table_name for table_name in SCHEMA_CATALOG if table_name in selected]
