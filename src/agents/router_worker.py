@@ -77,7 +77,7 @@ class ResponseWorker:
             return False
         return any(keyword in lowered for keyword in DATA_KEYWORDS)
 
-    def classify(self, question: str) -> str:
+    def classify(self, question: str, conversation_history: list = None) -> str:
         stripped = question.strip()
         if not stripped:
             return "unsupported"
@@ -89,6 +89,12 @@ class ResponseWorker:
             return "unsupported"
         if self.is_data_question(stripped):
             return "data"
+        # If there's conversation history with data turns, treat ambiguous
+        # follow-ups as data questions (e.g. "what about by state?")
+        if conversation_history:
+            has_data_turn = any(turn.get("sql") for turn in conversation_history)
+            if has_data_turn:
+                return "data"
         return "general"
 
     def respond(self, state: dict):
@@ -126,7 +132,10 @@ _response_worker = ResponseWorker()
 
 
 def router_node(state: dict):
-    intent = _response_worker.classify(state.get("question", ""))
+    intent = _response_worker.classify(
+        state.get("question", ""),
+        state.get("conversation_history", []),
+    )
     return {
         **state,
         "intent": intent,

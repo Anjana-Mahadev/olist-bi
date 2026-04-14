@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from src.config import get_settings
 from src.graph import app as langgraph_app
 from src.logger import log_interaction
+from src.memory import conversation_memory
 
 load_dotenv()
 settings = get_settings()
@@ -61,6 +62,7 @@ def query():
 
     data = request.get_json(silent=True) or {}
     user_question = data.get('question', '').strip()
+    session_id = data.get('session_id', '').strip() or str(uuid.uuid4())[:8]
     request_id = str(uuid.uuid4())[:8]
 
     if not user_question:
@@ -74,8 +76,11 @@ def query():
 
     try:
         start_time = time.time()
+        history = conversation_memory.get_history(session_id)
         initial_state = {
             "request_id": request_id,
+            "session_id": session_id,
+            "conversation_history": history,
             "question": user_question,
             "messages": [{"role": "user", "content": user_question}],
             "plan": [],
@@ -108,6 +113,14 @@ def query():
             "llm_model": final_state.get("llm_model", None),
         }
 
+        # Save turn to short-term memory
+        conversation_memory.add_turn(
+            session_id=session_id,
+            question=user_question,
+            sql=sql_query,
+            answer=analysis_text,
+        )
+
         log_interaction(
             question=user_question,
             sql_query=sql_query,
@@ -118,6 +131,7 @@ def query():
         return jsonify({
             "status": "success",
             "request_id": final_state.get("request_id", request_id),
+            "session_id": session_id,
             "sql": str(sql_query),
             "analysis": analysis_text,
             "execution_time": execution_time,

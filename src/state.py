@@ -3,6 +3,8 @@ from typing import Any, Dict, List, TypedDict
 
 class AgentState(TypedDict, total=False):
     request_id: str
+    session_id: str
+    conversation_history: List[Dict[str, str]]
     question: str
     intent: str
     response_type: str

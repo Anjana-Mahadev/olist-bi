@@ -148,14 +148,16 @@
                         <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent-warm);"></div>
                     </div>
                     <span class="mono text-xs uppercase tracking-[0.18em]" style="color: var(--text-soft);">Agent Graph Diagram</span>
-                    <span class="mono text-[10px] px-2 py-0.5 rounded-full" style="background: rgba(41,197,166,0.12); border: 1px solid rgba(41,197,166,0.3); color: var(--accent);">11 nodes</span>
+                    <span class="mono text-[10px] px-2 py-0.5 rounded-full" style="background: rgba(41,197,166,0.12); border: 1px solid rgba(41,197,166,0.3); color: var(--accent);">11 nodes + memory</span>
                 </div>
                 <span id="graphChevron" class="mono text-base" style="color: var(--text-soft); transition: transform 0.3s ease;">&#8964;</span>
             </button>
             <div id="graphContainer" class="hidden px-6 pb-6 pt-2">
-                <p class="mono text-[11px] mb-4" style="color: var(--text-soft);">Each user query is routed through this graph. Nodes execute in sequence; conditional edges handle retries and failures.</p>
+                <p class="mono text-[11px] mb-4" style="color: var(--text-soft);">Each user query is routed through this graph. Short-term memory injects conversation history before the graph runs and saves the turn after completion.</p>
                 <div id="mermaidGraph" class="mermaid overflow-x-auto" style="background: transparent; min-height: 120px;">
 flowchart TD
+    UserInput>"fa:fa-user User Question"]:::input
+    Memory[(Short-Term Memory<br/>last 5 turns per session)]:::memory
     Router([Router]):::entry
     Responder([Responder]):::conv
     SchemaSelector([Schema Selector]):::util
@@ -167,14 +169,19 @@ flowchart TD
     DBExecutor([DB Executor]):::exec
     Analyst([Analyst]):::analyst
     AnswerComposer([Answer Composer]):::output
+    FinalAnswer>"fa:fa-comment Final Answer to User"]:::input
 
+    UserInput ==> Router
+    Memory -. "load history" .-> Router
     Router -- "greeting / general" --> Responder
     Router -- "data query" --> SchemaSelector
     Responder --> AnswerComposer
     SchemaSelector --> Planner
+    Memory -. "context" .-> Planner
     Planner -- "simple" --> SQLWorker
     Planner -- "complex" --> Decomposer
     Decomposer --> SQLWorker
+    Memory -. "context" .-> SQLWorker
     SQLWorker --> SQLValidator
     SQLValidator -- "valid" --> DBExecutor
     SQLValidator -- "invalid + retry" --> RepairSQL
@@ -184,6 +191,8 @@ flowchart TD
     DBExecutor -- "error + retry" --> RepairSQL
     DBExecutor -- "exhausted" --> AnswerComposer
     Analyst --> AnswerComposer
+    AnswerComposer -. "save turn" .-> Memory
+    AnswerComposer ==> FinalAnswer
 
     classDef entry fill:#0c2318,stroke:#29c5a6,color:#c2fff4
     classDef conv fill:#0a1c2e,stroke:#4fc3f7,color:#c2e4ff
@@ -193,6 +202,8 @@ flowchart TD
     classDef analyst fill:#081c28,stroke:#4fc3f7,color:#a8e6f8
     classDef repair fill:#241010,stroke:#ff7a7a,color:#ffc8c8
     classDef output fill:#071a12,stroke:#29c5a6,color:#b5f5db
+    classDef memory fill:#1a1a08,stroke:#f0d060,color:#fff8d0,stroke-dasharray: 5 5
+    classDef input fill:#162030,stroke:#4fc3f7,color:#e7edf9,stroke-width:2px
                 </div>
             </div>
         </div>
@@ -214,6 +225,15 @@ flowchart TD
                     style="background: linear-gradient(130deg, var(--accent), var(--accent-2)); color: #041019; box-shadow: 0 10px 24px rgba(41, 197, 166, 0.25);"
                 >
                     Run Analysis
+                </button>
+                <button
+                    onclick="newSession()"
+                    id="newChatBtn"
+                    class="rounded-xl px-6 py-4 text-sm md:text-base font-semibold transition-all duration-200"
+                    style="background: rgba(255,255,255,0.06); border: 1px solid var(--line); color: var(--text-soft);"
+                    title="Start a new conversation (clears memory)"
+                >
+                    New Chat
                 </button>
             </div>
 
@@ -348,6 +368,23 @@ flowchart TD
             document.getElementById('question').focus();
         }
 
+        // --- Short-term memory: session management ---
+        function generateSessionId() {
+            return crypto.randomUUID().slice(0, 12);
+        }
+        let sessionId = sessionStorage.getItem('olist_session_id');
+        if (!sessionId) {
+            sessionId = generateSessionId();
+            sessionStorage.setItem('olist_session_id', sessionId);
+        }
+        function newSession() {
+            sessionId = generateSessionId();
+            sessionStorage.setItem('olist_session_id', sessionId);
+            document.getElementById('resultArea').classList.add('hidden');
+            document.getElementById('question').value = '';
+            document.getElementById('question').focus();
+        }
+
         function toggleSql() {
             const container = document.getElementById('sqlContainer');
             const chevron = document.getElementById('sqlChevron');
@@ -428,7 +465,7 @@ flowchart TD
                 const response = await fetch('/query', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question }),
+                    body: JSON.stringify({ question, session_id: sessionId }),
                     signal: controller.signal,
                 });
                 clearTimeout(timeoutId);
@@ -470,8 +507,6 @@ flowchart TD
                 metricsHtml += `<div><b>Repair Attempts:</b> ${metrics.repair_attempts || 0} / ${metrics.max_retries || 2}</div>`;
                 metricsHtml += `<div><b>Confidence:</b> ${metrics.confidence !== undefined && metrics.confidence !== null ? metrics.confidence.toFixed(2) : 'N/A'}</div>`;
                 metricsHtml += `<div><b>Execution Error:</b> ${metrics.execution_error ? metrics.execution_error : 'None'}</div>`;
-                metricsHtml += `<div><b>LLM Model:</b> ${metrics.llm_model || 'N/A'}</div>`;
-                metricsHtml += `<div><b>LLM Tokens:</b> ${metrics.llm_tokens !== undefined && metrics.llm_tokens !== null ? metrics.llm_tokens : 'N/A'}</div>`;
                 metricsBox.innerHTML = metricsHtml;
                 document.getElementById('metricsPanel').classList.remove('hidden');
 

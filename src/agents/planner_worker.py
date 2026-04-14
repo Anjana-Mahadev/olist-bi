@@ -18,7 +18,15 @@ COMPLEXITY_KEYWORDS = [
 def planner_node(state: dict):
     question = state.get("question", "")
     lowered = question.lower()
+    conversation_history = state.get("conversation_history", [])
     is_complex = any(keyword in lowered for keyword in COMPLEXITY_KEYWORDS) or lowered.count(" and ") > 0
+
+    # Inherit complexity from the previous turn when this looks like a follow-up
+    if not is_complex and conversation_history:
+        last_sql = (conversation_history[-1].get("sql") or "")
+        if last_sql and len(lowered.split()) < 8:
+            is_complex = True
+
     complexity = "complex" if is_complex else "simple"
 
     if is_complex:

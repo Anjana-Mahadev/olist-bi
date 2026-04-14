@@ -25,9 +25,21 @@ class SQLWorker:
         validation_errors = state.get("validation_errors", [])
         execution_error = state.get("execution_error", "")
         previous_sql = state.get("sql_query", "")
+        conversation_history = state.get("conversation_history", [])
 
         plan_text = "\n".join(f"- {step}" for step in plan) if plan else "- Answer the question with one SQLite query"
         sub_question_text = "\n".join(f"- {item}" for item in sub_questions) if sub_questions else "- None"
+
+        # Build conversation context from short-term memory
+        history_block = ""
+        if conversation_history:
+            history_lines = []
+            for turn in conversation_history[-3:]:  # last 3 turns max
+                history_lines.append(f"Q: {turn['question']}")
+                if turn.get("sql"):
+                    history_lines.append(f"SQL: {turn['sql']}")
+                history_lines.append(f"A: {turn['answer'][:200]}")
+            history_block = "\nRecent conversation (use for context on follow-up questions):\n" + "\n".join(history_lines)
 
         repair_block = ""
         if validation_errors or execution_error or previous_sql:
@@ -49,9 +61,11 @@ Rules:
 - Do not use markdown, explanations, or code fences.
 - Prefer explicit joins and explicit column names.
 - For row-level queries, include a LIMIT clause.
+- If the user question is a follow-up, use the conversation history to resolve references.
 
 Available schema:
 {schema_context}
+{history_block}
 
 User question:
 {state.get('question', '')}
