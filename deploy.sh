@@ -34,26 +34,32 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 # --- 1. System packages ---
-echo "[1/6] Installing system packages..."
+echo "[1/7] Installing system packages..."
 apt-get update -y
 apt-get install -y \
   $PYTHON_VERSION ${PYTHON_VERSION}-venv ${PYTHON_VERSION}-dev \
-  python3-pip nginx curl
+  python3-pip nginx curl git-lfs
 
 # --- 2. Create app user ---
-echo "[2/6] Creating application user..."
+echo "[2/7] Creating application user..."
 if ! id "$APP_USER" &>/dev/null; then
   useradd --system --create-home --shell /usr/sbin/nologin "$APP_USER"
 fi
 
-# --- 3. Copy application code ---
-echo "[3/6] Deploying application to $APP_DIR..."
+# --- 3. Pull Git LFS files (olist.db) ---
+echo "[3/7] Pulling Git LFS files..."
+cd "$REPO_SRC"
+git lfs install
+git lfs pull
+
+# --- 4. Copy application code ---
+echo "[4/7] Deploying application to $APP_DIR..."
 mkdir -p "$APP_DIR"
 rsync -a --exclude='venv' --exclude='__pycache__' --exclude='.git' \
   "$REPO_SRC/" "$APP_DIR/"
 
-# --- 4. Python virtual environment & dependencies ---
-echo "[4/6] Setting up Python environment..."
+# --- 5. Python virtual environment & dependencies ---
+echo "[5/7] Setting up Python environment..."
 $PYTHON_VERSION -m venv "$VENV_DIR"
 "$VENV_DIR/bin/pip" install --upgrade pip
 "$VENV_DIR/bin/pip" install -r "$APP_DIR/requirements.txt"
@@ -61,8 +67,8 @@ $PYTHON_VERSION -m venv "$VENV_DIR"
 # Fix ownership
 chown -R "$APP_USER:$APP_USER" "$APP_DIR"
 
-# --- 5. Systemd service for Gunicorn ---
-echo "[5/6] Configuring Gunicorn systemd service..."
+# --- 6. Systemd service for Gunicorn ---
+echo "[6/7] Configuring Gunicorn systemd service..."
 
 cat > /etc/systemd/system/${APP_NAME}.service <<EOF
 [Unit]
@@ -95,8 +101,8 @@ systemctl daemon-reload
 systemctl enable ${APP_NAME}
 systemctl restart ${APP_NAME}
 
-# --- 6. Nginx reverse proxy ---
-echo "[6/6] Configuring Nginx..."
+# --- 7. Nginx reverse proxy ---
+echo "[7/7] Configuring Nginx..."
 
 cat > /etc/nginx/sites-available/${APP_NAME} <<EOF
 server {
