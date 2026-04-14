@@ -61,8 +61,8 @@ def query():
         return auth_error
 
     data = request.get_json(silent=True) or {}
-    user_question = data.get('question', '').strip()
-    session_id = data.get('session_id', '').strip() or str(uuid.uuid4())[:8]
+    user_question = (data.get('question') or '').strip()
+    session_id = (data.get('session_id') or '').strip() or str(uuid.uuid4())[:8]
     request_id = str(uuid.uuid4())[:8]
 
     if not user_question:
