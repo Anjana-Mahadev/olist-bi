@@ -370,7 +370,8 @@ flowchart TD
 
         // --- Short-term memory: session management ---
         function generateSessionId() {
-            return crypto.randomUUID().slice(0, 12);
+            if (crypto.randomUUID) return crypto.randomUUID().slice(0, 12);
+            return Array.from(crypto.getRandomValues(new Uint8Array(6)), b => b.toString(16).padStart(2, '0')).join('');
         }
         let sessionId = sessionStorage.getItem('olist_session_id');
         if (!sessionId) {
@@ -461,7 +462,7 @@ flowchart TD
 
             try {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 45000);
+                const timeoutId = setTimeout(() => controller.abort(), 120000);
                 const response = await fetch('/query', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
